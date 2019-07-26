@@ -185,13 +185,13 @@ static NSData* kTerminator;
 
 - (void)setDelegate:(id<WebSocketDelegate>)newDelegate {
 	dispatch_async(_websocketQueue, ^{
-		_delegate = newDelegate;
+        self->_delegate = newDelegate;
 	});
 }
 
 - (void) useTLS: (NSDictionary*)tlsSettings {
 	dispatch_async(_websocketQueue, ^{
-        _tlsSettings = tlsSettings;
+        self->_tlsSettings = tlsSettings;
     });
 }
 
@@ -208,7 +208,7 @@ static NSData* kTerminator;
 	// Subclasses are encouraged to override the didOpen method instead.
 	
 	dispatch_async(_websocketQueue, ^{ @autoreleasepool {
-		if (_state > kWebSocketUnopened)
+        if (self->_state > kWebSocketUnopened)
             return;
 		self.state = kWebSocketOpening;
 		
@@ -224,7 +224,7 @@ static NSData* kTerminator;
 	// Subclasses are encouraged to override the didClose method instead.
 	
 	dispatch_async(_websocketQueue, ^{ @autoreleasepool {
-		[_asyncSocket disconnect];
+        [self->_asyncSocket disconnect];
 	}});
 }
 
@@ -248,7 +248,7 @@ static NSData* kTerminator;
     }
 
 	dispatch_async(_websocketQueue, ^{ @autoreleasepool {
-        if (_state == kWebSocketOpen) {
+        if (self->_state == kWebSocketOpen) {
             [self sendFrame: msg type: WS_OP_CONNECTION_CLOSE tag: 0];
             self.state = kWebSocketClosing;
         }
@@ -364,12 +364,12 @@ static NSData* kTerminator;
 	}
 	
 	dispatch_async(_websocketQueue, ^{ @autoreleasepool {
-        if (_state == kWebSocketOpen) {
+        if (self->_state == kWebSocketOpen) {
             if (tag == TAG_MESSAGE) {
-                _writeQueueSize += 1; // data.length would be better
+                self->_writeQueueSize += 1; // data.length would be better
             }
-            [_asyncSocket writeData:data withTimeout:_timeout tag: tag];
-            if (tag == TAG_MESSAGE && _writeQueueSize <= HUNGRY_SIZE)
+            [self->_asyncSocket writeData:data withTimeout:self->_timeout tag: tag];
+            if (tag == TAG_MESSAGE && self->_writeQueueSize <= HUNGRY_SIZE)
                 [self isHungry];
         }
     }});
@@ -493,12 +493,15 @@ static NSData* kTerminator;
         didReceiveTrust:(SecTrustRef)trust
         completionHandler:(void (^)(BOOL shouldTrustPeer))completionHandler
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     // This only gets called if the SSL settings disable regular cert validation.
     SecTrustEvaluateAsync(trust, dispatch_get_main_queue(),
                           ^(SecTrustRef trustRef, SecTrustResultType result)
+#pragma clang diagnostic pop
     {
         BOOL ok;
-        id<WebSocketDelegate> delegate = _delegate;
+        id<WebSocketDelegate> delegate = self->_delegate;
         if ([delegate respondsToSelector: @selector(webSocket:shouldSecureWithTrust:)]) {
             ok = [delegate webSocket: self shouldSecureWithTrust: trust];
         } else {
